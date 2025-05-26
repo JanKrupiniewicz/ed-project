@@ -60,8 +60,8 @@ plt.title('Histogram rozkładu zmiennej blueWins')
 plt.xlabel('blueWins')
 plt.ylabel('Liczba wystąpień')
 plt.xticks([0, 1], ['Przegrana', 'Wygrana'])
-plt.show()
-
+plt.savefig('plots/blueWins_distribution.png')
+plt.close()
 
 # ----------------------------------------------------------------
 # Część 3: Analiza rozkladu atrybutów
@@ -70,28 +70,30 @@ print("\nCzęść 3: Analiza rozkładu atrybutów")
 
 attributes = df.columns.tolist()
 
-os.makedirs('plots/blue', exist_ok=True)
-os.makedirs('plots/red', exist_ok=True)
+os.makedirs('plots/distribution', exist_ok=True)
+os.makedirs('plots/correlation', exist_ok=True)
+os.makedirs('plots/correlation_matrix', exist_ok=True)
 
-def plot_attribute_distribution(attribute):
+
+def plot_attribute_distribution(attribute, folder):
     plt.figure(figsize=(10, 6))
     sns.histplot(df[attribute], bins=30, kde=True)
     plt.title(f'Histogram rozkładu atrybutu {attribute}')
     plt.xlabel(attribute)
     plt.ylabel('Liczba wystąpień')
-    plt.savefig(f'plots/blue/{attribute}_distribution.png')
+    plt.savefig(f'plots/{folder}/distribution/{attribute}_distribution.png')
     plt.close()
 
 
 # Wykresy rozkładu atrybutów dla drużyny niebieskiej
 for attr in attributes:
     if 'blue' in attr:
-        plot_attribute_distribution(attr)
+        plot_attribute_distribution(attr, 'blue')
 
 # Wykresy rozkładu atrybutów dla drużyny czerwonej
 for attr in attributes:
     if 'red' in attr:
-        plot_attribute_distribution(attr)
+        plot_attribute_distribution(attr, 'red')
 
 
 # ----------------------------------------------------------------
@@ -99,40 +101,84 @@ for attr in attributes:
 # ----------------------------------------------------------------
 print("\nCzęść 4: Analiza korelacji")
 
-correlation_matrix = df.corr()
+# Obliczenie macierzy korelacji
+correlation_matrix = df.corr(numeric_only=True)
 
-plt.figure(figsize=(12, 10))
-sns.heatmap(correlation_matrix, annot=True, fmt='.2f', cmap='coolwarm', square=True)
-plt.title('Macierz korelacji')
-plt.savefig('plots/correlation_matrix.png')
+# Wizualizacja macierzy korelacji – heatmapa
+plt.figure(figsize=(16, 14))
+sns.set(font_scale=0.8)
+heatmap = sns.heatmap(correlation_matrix, annot=True, fmt='.2f', cmap='coolwarm', square=True, linewidths=0.5, cbar_kws={"shrink": .8})
+heatmap.set_title('Macierz korelacji (czytelna)', fontdict={'fontsize': 16})
+plt.tight_layout()
+plt.savefig('plots/correlation_matrix/correlation_matrix_readable.png')
 plt.close()
 
-# Korelacja między atrybutami a zmienną docelową 'blueWins'
-correlation_with_target = correlation_matrix['blueWins'].sort_values(ascending=False)
-print("\nKorelacja między atrybutami a zmienną docelową 'blueWins':")
-print(correlation_with_target)
+# Korelacja z 'blueWins'
+correlation_with_target = correlation_matrix['blueWins'].drop('blueWins').sort_values(ascending=False)
 
-# Wizualizacja korelacji z wybranymi atrybutami
+print("\nTop 10 NAJBARDZIEJ dodatnich korelacji z 'blueWins':")
+print(correlation_with_target.head(10))
+
+# Wykres słupkowy – top 10 korelacji dodatnich
+top_positive_corr = correlation_with_target.head(10)
+
+plt.figure(figsize=(12, 6))
+top_positive_corr.plot(kind='barh', color='green')
+plt.title('Top 10 najbardziej dodatnich korelacji z blueWins')
+plt.xlabel('Wartość korelacji')
+plt.tight_layout()
+plt.savefig('plots/correlation_matrix/top_positive_correlations.png')
+plt.close()
+
+# Wykresy scatter tylko dla NAJWAŻNIEJSZYCH zmiennych
+important_attributes = top_positive_corr.index.tolist()
+os.makedirs('plots/correlation/top_attributes', exist_ok=True)
+
 def plot_correlation_with_target(attribute):
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(8, 5))
     sns.scatterplot(x=df[attribute], y=df['blueWins'])
-    plt.title(f'Korelacja między {attribute} a blueWins')
+    plt.title(f'{attribute} vs blueWins')
     plt.xlabel(attribute)
     plt.ylabel('blueWins')
-    plt.savefig(f'plots/correlation_{attribute}_blueWins.png')
+    plt.tight_layout()
+    plt.savefig(f'plots/correlation/top_attributes/{attribute}_correlation.png')
     plt.close()
 
-# Wykresy korelacji z wybranymi atrybutami
-for attr in attributes:
-    if 'blue' in attr or 'red' in attr:
-        plot_correlation_with_target(attr)
+for attr in important_attributes:
+    plot_correlation_with_target(attr)
 
 
-# Wizaulizacja macierzy korelacji jako heatmap
+# ----------------------------------------------------------------
+# Część 5: Porownanie statystyk dla meczy wygranych i przegranych
+# ----------------------------------------------------------------
+print("\nCzęść 5: Porównanie statystyk dla meczy wygranych i przegranych")
 
-plt.figure(figsize=(12, 10))
-sns.heatmap(correlation_matrix, annot=True, fmt='.2f', cmap='coolwarm', square=True)
-plt.title('Macierz korelacji')
-plt.savefig('plots/correlation_matrix_heatmap.png')
-plt.close()
+# Wybór kluczowych statystyk (dla drużyny niebieskiej)
+key_stats = [
+    'blueKills', 'blueDeaths', 'blueAssists',
+    'blueTotalGold', 'blueTotalExperience',
+    'blueDragons', 'blueHeralds', 'blueTowersDestroyed',
+    'blueWardsPlaced', 'blueWardsDestroyed'
+]
+
+# Tworzenie folderu na wykresy
+os.makedirs('plots/stat_comparison', exist_ok=True)
+
+# Tworzenie wykresów porównawczych
+for stat in key_stats:
+    plt.figure(figsize=(10, 6))
+    sns.boxplot(data=df, x='blueWins', y=stat, palette='Set2')
+    plt.title(f'Porównanie statystyki {stat} dla wygranych (1) i przegranych (0) meczów')
+    plt.xlabel('blueWins (0 = przegrana, 1 = wygrana)')
+    plt.ylabel(stat)
+    plt.xticks([0, 1], ['Przegrana', 'Wygrana'])
+    plt.tight_layout()
+    plt.savefig(f'plots/stat_comparison/{stat}_comparison.png')
+    plt.close()
+
+
+# ----------------------------------------------------------------
+# Część 6: Analiza wpływu czynników na wygraną
+# ----------------------------------------------------------------
+print("\nCzęść 6: Analiza wpływu czynników na wygraną")
 
