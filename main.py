@@ -14,6 +14,15 @@ print("Część 1: Wczytanie danych oraz podstawowe operacje")
 df = pd.read_csv('high_diamond_ranked_10min.csv')
 print("\nDane zostały wczytane.")
 
+os.makedirs('plots/distribution', exist_ok=True)
+os.makedirs('plots/distribution/blue', exist_ok=True)
+os.makedirs('plots/distribution/red', exist_ok=True)
+
+os.makedirs('plots/correlation', exist_ok=True)
+os.makedirs('plots/correlation/top_attributes', exist_ok=True)
+
+os.makedirs('plots/stat_comparison', exist_ok=True)
+
 # Pierwsze 5 wierszy DataFrame
 print("\nPierwsze 5 wierszy DataFrame:")
 print(df.head())
@@ -25,8 +34,6 @@ print(df.info())
 # Statystyki opisowe
 print("\nStatystyki opisowe:")
 print(df.describe())
-
-
 
 # ----------------------------------------------------------------
 # Część 2: Wizualizacja danych
@@ -70,10 +77,6 @@ print("\nCzęść 3: Analiza rozkładu atrybutów")
 
 attributes = df.columns.tolist()
 
-os.makedirs('plots/distribution', exist_ok=True)
-os.makedirs('plots/correlation', exist_ok=True)
-os.makedirs('plots/correlation_matrix', exist_ok=True)
-
 
 def plot_attribute_distribution(attribute, folder):
     plt.figure(figsize=(10, 6))
@@ -81,7 +84,7 @@ def plot_attribute_distribution(attribute, folder):
     plt.title(f'Histogram rozkładu atrybutu {attribute}')
     plt.xlabel(attribute)
     plt.ylabel('Liczba wystąpień')
-    plt.savefig(f'plots/{folder}/distribution/{attribute}_distribution.png')
+    plt.savefig(f'plots/distribution/{folder}/{attribute}_distribution.png')
     plt.close()
 
 
@@ -110,7 +113,7 @@ sns.set(font_scale=0.8)
 heatmap = sns.heatmap(correlation_matrix, annot=True, fmt='.2f', cmap='coolwarm', square=True, linewidths=0.5, cbar_kws={"shrink": .8})
 heatmap.set_title('Macierz korelacji (czytelna)', fontdict={'fontsize': 16})
 plt.tight_layout()
-plt.savefig('plots/correlation_matrix/correlation_matrix_readable.png')
+plt.savefig('plots/correlation/correlation_matrix_readable.png')
 plt.close()
 
 # Korelacja z 'blueWins'
@@ -119,20 +122,9 @@ correlation_with_target = correlation_matrix['blueWins'].drop('blueWins').sort_v
 print("\nTop 10 NAJBARDZIEJ dodatnich korelacji z 'blueWins':")
 print(correlation_with_target.head(10))
 
-# Wykres słupkowy – top 10 korelacji dodatnich
+# Wykresy scatter tylko dla Top 10 korelacji dodatnich zmiennych
 top_positive_corr = correlation_with_target.head(10)
-
-plt.figure(figsize=(12, 6))
-top_positive_corr.plot(kind='barh', color='green')
-plt.title('Top 10 najbardziej dodatnich korelacji z blueWins')
-plt.xlabel('Wartość korelacji')
-plt.tight_layout()
-plt.savefig('plots/correlation_matrix/top_positive_correlations.png')
-plt.close()
-
-# Wykresy scatter tylko dla NAJWAŻNIEJSZYCH zmiennych
 important_attributes = top_positive_corr.index.tolist()
-os.makedirs('plots/correlation/top_attributes', exist_ok=True)
 
 def plot_correlation_with_target(attribute):
     plt.figure(figsize=(8, 5))
@@ -161,9 +153,6 @@ key_stats = [
     'blueWardsPlaced', 'blueWardsDestroyed'
 ]
 
-# Tworzenie folderu na wykresy
-os.makedirs('plots/stat_comparison', exist_ok=True)
-
 # Tworzenie wykresów porównawczych
 for stat in key_stats:
     plt.figure(figsize=(10, 6))
@@ -178,7 +167,44 @@ for stat in key_stats:
 
 
 # ----------------------------------------------------------------
-# Część 6: Analiza wpływu czynników na wygraną
+# Część 6: Sprawdzanie poprawności danych
 # ----------------------------------------------------------------
-print("\nCzęść 6: Analiza wpływu czynników na wygraną")
+print("\nCzęść 6: Sprawdzanie poprawności danych")
 
+# Sprawdzenie, czy wszystkie wartości w kolumnie 'blueWins' są 0 lub 1
+if df['blueWins'].isin([0, 1]).all():
+    print("Kolumna 'blueWins' zawiera tylko wartości 0 i 1.")
+else:
+    print("Kolumna 'blueWins' zawiera wartości inne niż 0 i 1.")
+
+# Sprawdzenie, czy kolumny 'blueKills' i 'redKills' są liczbami całkowitymi
+if df['blueKills'].dtype == 'int64' and df['redKills'].dtype == 'int64':
+    print("Kolumny 'blueKills' i 'redKills' są liczbami całkowitymi.")
+else:
+    print("Kolumny 'blueKills' i/lub 'redKills' NIE są liczbami całkowitymi.")
+
+# Sprawdzenie, czy zawsze tylko jedna drużyna ma first blood
+if 'blueFirstBlood' in df.columns and 'redFirstBlood' in df.columns:
+    first_blood_sum = df['blueFirstBlood'].sum() + df['redFirstBlood'].sum()
+    if first_blood_sum == len(df):
+        print("Każdy mecz ma dokładnie jedno first blood.")
+    else:
+        print("Niektóre mecze mają więcej niż jedno first blood lub brak first blood.")
+
+# Sprawdzenie zgodności kills i deaths między drużynami
+if 'blueKills' in df.columns and 'redKills' in df.columns:
+    if (df['blueKills'] + df['redKills']).equals(df['blueDeaths'] + df['redDeaths']):
+        print("Suma zabójstw drużyny niebieskiej i czerwonej jest zgodna z sumą śmierci.")
+    else:
+        print("Suma zabójstw drużyny niebieskiej i czerwonej NIE jest zgodna z sumą śmierci.")
+
+# Sprawdzenie, czy wartosci diff Gold są zgodne z różnicą między drużynami
+if 'blueTotalGold' in df.columns and 'redTotalGold' in df.columns:
+    df['gold_diff'] = df['blueTotalGold'] - df['redTotalGold']
+    if (df['gold_diff'] == (df['blueTotalGold'] - df['redTotalGold'])).all():
+        print("Różnica w złocie jest zgodna z różnicą między drużynami.")
+    else:
+        print("Różnica w złocie NIE jest zgodna z różnicą między drużynami.")
+
+
+print("\nAnaliza danych zakończona. Wykresy i statystyki zostały zapisane w katalogu 'plots'.")
