@@ -62,11 +62,15 @@ print(f"Liczba niezrozumiałych danych: {len(unreadable_data)}")
 
 # Histogram rozkładu zmiennej docelowaej 'blueWins'
 plt.figure(figsize=(10, 6))
-sns.histplot(df['blueWins'], bins=2, kde=False)
+counts = df['blueWins'].value_counts().sort_index()
+
+sns.barplot(x=[0, 1], y=counts.values, palette=['red', 'blue'])
+
 plt.title('Histogram rozkładu zmiennej blueWins')
-plt.xlabel('blueWins')
+plt.xlabel('Wynik meczu (0 = Czerwona wygrała, 1 = Niebieska wygrała)')
 plt.ylabel('Liczba wystąpień')
-plt.xticks([0, 1], ['Przegrana', 'Wygrana'])
+plt.xticks([0, 1], ['Czerwona wygrała', 'Niebieska wygrała'])
+plt.tight_layout()
 plt.savefig('plots/blueWins_distribution.png')
 plt.close()
 
