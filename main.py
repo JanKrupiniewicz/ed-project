@@ -82,13 +82,19 @@ print("\nCzęść 3: Analiza rozkładu atrybutów")
 
 attributes = df.columns.tolist()
 
-
 def plot_attribute_distribution(attribute, folder):
     plt.figure(figsize=(10, 6))
     sns.histplot(df[attribute], bins=30, kde=True)
     plt.title(f'Histogram rozkładu atrybutu {attribute}')
     plt.xlabel(attribute)
     plt.ylabel('Liczba wystąpień')
+
+    # Dodanie liczbowych wartości (ilości wystąpień) nad słupkami
+    counts, bins = np.histogram(df[attribute].dropna(), bins=30)
+    for count, left, right in zip(counts, bins[:-1], bins[1:]):
+        if count > 0:
+            plt.text((left + right) / 2, count, str(count), ha='center', va='bottom', fontsize=8, rotation=90)
+
     plt.savefig(f'plots/distribution/{folder}/{attribute}_distribution.png')
     plt.close()
 
@@ -112,6 +118,9 @@ print("\nCzęść 4: Analiza korelacji")
 # Obliczenie macierzy korelacji
 correlation_matrix = df.corr(numeric_only=True)
 
+print("\nMacierz korelacji:")
+print(correlation_matrix)
+
 # Wizualizacja macierzy korelacji – heatmapa
 plt.figure(figsize=(16, 14))
 sns.set(font_scale=0.8)
@@ -127,6 +136,9 @@ correlation_with_target = correlation_matrix['blueWins'].drop('blueWins').sort_v
 print("\nTop 10 NAJBARDZIEJ dodatnich korelacji z 'blueWins':")
 print(correlation_with_target.head(10))
 
+print("\nTop 10 NAJBARDZIEJ ujemnych korelacji z 'blueWins':")
+print(correlation_with_target.tail(10))
+
 # Wykresy scatter dla Top 10 korelacji dodatnich zmiennych
 plt.figure(figsize=(10, 6))
 sns.barplot(x=correlation_with_target.head(10).index, y=correlation_with_target.head(10).values, palette='viridis', hue=correlation_with_target.head(10).index) 
@@ -141,6 +153,7 @@ plt.close()
 # Wykresy scatter tylko dla Top 10 korelacji dodatnich zmiennych
 top_positive_corr = correlation_with_target.head(10)
 important_attributes = top_positive_corr.index.tolist()
+
 
 def plot_correlation_with_target(attribute):
     plt.figure(figsize=(8, 5))
@@ -191,6 +204,7 @@ plt.ylabel('Korelacja z blueWins')
 plt.xticks(rotation=45)
 plt.tight_layout()
 plt.savefig('plots/stat_comparison/top_factors_influencing_result.png')
+plt.close()
 
 # ----------------------------------------------------------------
 # Część 6: Sprawdzanie poprawności danych
