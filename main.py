@@ -64,7 +64,8 @@ print(f"Liczba niezrozumiałych danych: {len(unreadable_data)}")
 plt.figure(figsize=(10, 6))
 counts = df['blueWins'].value_counts().sort_index()
 
-sns.barplot(x=[0, 1], y=counts.values, palette=['red', 'blue'])
+sns.barplot(x=[0, 1], y=counts.values, palette=['red', 'blue'], 
+            order=[0, 1], hue=counts.index)
 
 plt.title('Histogram rozkładu zmiennej blueWins')
 plt.xlabel('Wynik meczu (0 = Czerwona wygrała, 1 = Niebieska wygrała)')
@@ -126,6 +127,17 @@ correlation_with_target = correlation_matrix['blueWins'].drop('blueWins').sort_v
 print("\nTop 10 NAJBARDZIEJ dodatnich korelacji z 'blueWins':")
 print(correlation_with_target.head(10))
 
+# Wykresy scatter dla Top 10 korelacji dodatnich zmiennych
+plt.figure(figsize=(10, 6))
+sns.barplot(x=correlation_with_target.head(10).index, y=correlation_with_target.head(10).values, palette='viridis', hue=correlation_with_target.head(10).index) 
+plt.title('Top 10 korelacji dodatnich z blueWins')
+plt.xlabel('Atrybuty')
+plt.ylabel('Korelacja z blueWins')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.savefig('plots/correlation/top_positive_correlations.png')
+plt.close()
+
 # Wykresy scatter tylko dla Top 10 korelacji dodatnich zmiennych
 top_positive_corr = correlation_with_target.head(10)
 important_attributes = top_positive_corr.index.tolist()
@@ -160,7 +172,7 @@ key_stats = [
 # Tworzenie wykresów porównawczych
 for stat in key_stats:
     plt.figure(figsize=(10, 6))
-    sns.boxplot(data=df, x='blueWins', y=stat, palette='Set2')
+    sns.boxplot(data=df, x='blueWins', y=stat, palette='Set2', hue='blueWins')
     plt.title(f'Porównanie statystyki {stat} dla wygranych (1) i przegranych (0) meczów')
     plt.xlabel('blueWins (0 = przegrana, 1 = wygrana)')
     plt.ylabel(stat)
@@ -169,6 +181,16 @@ for stat in key_stats:
     plt.savefig(f'plots/stat_comparison/{stat}_comparison.png')
     plt.close()
 
+
+# Wykres najwazniejszych czynnników wpływających na wynik meczu
+plt.figure(figsize=(10, 6))
+sns.barplot(x=correlation_with_target.head(10).index, y=correlation_with_target.head(10).values, palette='viridis', hue=correlation_with_target.head(10).index) 
+plt.title('Najważniejsze czynniki wpływające na wynik meczu')
+plt.xlabel('Atrybuty')
+plt.ylabel('Korelacja z blueWins')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.savefig('plots/stat_comparison/top_factors_influencing_result.png')
 
 # ----------------------------------------------------------------
 # Część 6: Sprawdzanie poprawności danych
