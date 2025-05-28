@@ -46,11 +46,6 @@ print("\nCzęść 2: Wizualizacja danych")
 print("\nDane brakujące:")
 print(df.isnull().sum())
 
-# Dane niespójne
-print("\nDane niespójne:")
-inconsistent_data = df[(df['blueWins'] < 0) | (df['blueWins'] > 1)]
-print(f"Liczba niespójnych danych: {len(inconsistent_data)}")
-
 
 # Histogram rozkładu zmiennej docelowaej 'blueWins'
 plt.figure(figsize=(10, 6))
@@ -70,6 +65,7 @@ plt.close()
 # Wartosc numeryczna ilosci wygranych przez druzyne niebieska meczow
 blue_wins_count = df['blueWins'].sum()
 print(f"\nLiczba meczów wygranych przez drużynę niebieską: {blue_wins_count}")
+
 # Wartosc numeryczna ilosci przegranych przez druzyne czerwona meczow
 red_wins_count = len(df) - blue_wins_count
 print(f"Liczba meczów wygranych przez drużynę czerwoną: {red_wins_count}")
@@ -85,7 +81,6 @@ print("\nBłąd standardowy dla wszystkich kolumn numerycznych:")
 print(se)
 
 # Analiza punktow oddalonych (outliers) - metoda z-score
-
 def detect_outliers_z_score(data, threshold=3):
     """Funkcja wykrywająca punkty oddalone (outliers) za pomocą z-score."""
     mean = np.mean(data)
@@ -284,6 +279,72 @@ plt.tight_layout()
 plt.savefig('plots/stat_comparison/top_factors_influencing_result.png')
 plt.close()
 
+# Srednia liczba smoków, heraldów i zniszczonych wież dla wygranych i przegranych meczów
+mean_additional_goals = df.groupby('blueWins')[['blueDragons', 'blueHeralds', 'blueTowersDestroyed']].mean()
+print("\nŚrednia liczba smoków, heraldów i zniszczonych wież dla wygranych i przegranych meczów:")
+print(mean_additional_goals)
+
+# Wykres porównawczy dodatkowych celów
+plt.figure(figsize=(10, 6))
+mean_additional_goals.plot(kind='bar')
+plt.title('Średnia liczba dodatkowych celów dla wygranych i przegranych meczów')
+plt.xlabel('Wynik meczu (0 = przegrana, 1 = wygrana)')
+plt.ylabel('Średnia liczba celów')
+plt.xticks(rotation=0)
+plt.legend(title='Cele dodatkowe', loc='upper right')
+plt.tight_layout()
+plt.savefig('plots/stat_comparison/additional_goals_comparison.png')
+plt.close()
+
+# Srednia liczba wardów postawionych i zniszczonych dla wygranych i przegranych meczów
+mean_wards = df.groupby('blueWins')[['blueWardsPlaced', 'blueWardsDestroyed']].mean()
+print("\nŚrednia liczba wardów postawionych i zniszczonych dla wygranych i przegranych meczów:")
+print(mean_wards)
+# Wykres porównawczy wardów
+plt.figure(figsize=(10, 6))
+mean_wards.plot(kind='bar')
+plt.title('Średnia liczba wardów postawionych i zniszczonych dla wygranych i przegranych meczów')
+plt.xlabel('Wynik meczu (0 = przegrana, 1 = wygrana)')
+plt.ylabel('Średnia liczba wardów')
+plt.xticks(rotation=0)
+plt.legend(title='Wardy', loc='upper right')
+plt.tight_layout()
+plt.savefig('plots/stat_comparison/wards_comparison.png')
+plt.close()
+
+# Statystyki smierci i zabójstw dla wygranych i przegranych meczów
+mean_kills_deaths = df.groupby('blueWins')[['blueKills', 'blueDeaths', 'blueAssists', 'blueFirstBlood']].mean()
+print("\nŚrednie statystyki zabójstw, śmierci i asyst dla wygranych i przegranych meczów:")
+print(mean_kills_deaths)
+# Wykres porównawczy zabójstw, śmierci i asyst
+plt.figure(figsize=(10, 6))
+mean_kills_deaths.plot(kind='bar')
+plt.title('Średnie statystyki zabójstw, śmierci i asyst dla wygranych i przegranych meczów')
+plt.xlabel('Wynik meczu (0 = przegrana, 1 = wygrana)')
+plt.ylabel('Średnia liczba zabójstw, śmierci i asyst')
+plt.xticks(rotation=0)
+plt.legend(title='Statystyki', loc='upper right')
+plt.tight_layout()
+plt.savefig('plots/stat_comparison/kills_deaths_assists_comparison.png')
+plt.close()
+
+
+# Srednia liczba zabitych minionów dla wygranych i przegranych meczów
+mean_minions = df.groupby('blueWins')[['blueTotalMinionsKilled', 'blueTotalJungleMinionsKilled', 'blueEliteMonsters']].mean()
+print("\nŚrednia liczba zabitych minionów dla wygranych i przegranych meczów:")
+print(mean_minions)
+# Wykres porównawczy zabitych minionów
+plt.figure(figsize=(10, 6))
+mean_minions.plot(kind='bar')
+plt.title('Średnia liczba zabitych minionów dla wygranych i przegranych meczów')
+plt.xlabel('Wynik meczu (0 = przegrana, 1 = wygrana)')
+plt.ylabel('Średnia liczba zabitych minionów')
+plt.xticks(rotation=0)
+plt.legend(title='Miniony', loc='upper right')
+plt.tight_layout()
+plt.savefig('plots/stat_comparison/minions_comparison.png')
+plt.close()
+
 # ----------------------------------------------------------------
 # Część 6: Sprawdzanie poprawności danych
 # ----------------------------------------------------------------
@@ -324,5 +385,3 @@ if 'blueTotalGold' in df.columns and 'redTotalGold' in df.columns:
     else:
         print("Różnica w złocie NIE jest zgodna z różnicą między drużynami.")
 
-
-print("\nAnaliza danych zakończona. Wykresy i statystyki zostały zapisane w katalogu 'plots'.")
