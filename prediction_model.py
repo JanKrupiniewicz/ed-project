@@ -12,6 +12,7 @@ from sklearn.tree import export_graphviz
 from graphviz import Source
 import matplotlib.pyplot as plt
 import seaborn as sns
+import random
 
 # Upewnij się, że masz zainstalowane biblioteki:
 # pip install pandas numpy scikit-learn matplotlib seaborn graphviz
@@ -38,7 +39,7 @@ except FileNotFoundError:
 print("\nCzęść 2: Utworzenie modelu predykcyjnego i ocena jego skuteczności")
 
 # Przygotowanie danych do modelowania
-columns_to_drop = ['gameId', 'blueWins', 'redGoldDiff', 'redExperienceDiff', 'blueDeaths', 'redDeaths', 'redFirstBlood', 'redDragons', 'redHeralds']
+columns_to_drop = ['gameId', 'blueWins', 'redGoldDiff', 'redExperienceDiff', 'blueDeaths', 'redDeaths', 'redFirstBlood', 'redDragons', 'redHeralds', 'redEliteMonsters']
 X = df.drop(columns=columns_to_drop)
 X = X.select_dtypes(include=[np.number])
 y = df['blueWins']
@@ -99,7 +100,7 @@ avg_feature_importances = pd.DataFrame(feature_importances_per_fold, columns=X.c
 
 # Słupkowy wykres uśrednionej istotności drzew decyzyjnych
 plt.figure(figsize=(12, 8))
-sns.barplot(x=avg_feature_importances.values, y=avg_feature_importances.index, palette='viridis')
+sns.barplot(x=avg_feature_importances.values, y=avg_feature_importances.index)
 plt.title('Słupkowy wykres uśrednionej istotności drzew decyzyjnych', fontsize=16)
 plt.xlabel('Uśredniona istotność', fontsize=14)
 plt.ylabel('Cechy', fontsize=14)
@@ -167,58 +168,80 @@ min_samples_split_values = [2, 5, 10, 20]
 min_samples_leaf_values = [1, 2, 5, 10]
 criterion_values = ['gini', 'entropy']
 
-# Przeszukiwanie siatki parametrów
-for max_depth in max_depth_values:
-    for min_samples_split in min_samples_split_values:
-        for min_samples_leaf in min_samples_leaf_values:
-            for criterion in criterion_values:
-                fold_accuracies = []
-                fold_sensitivities = []
-                fold_specificities = []
+# Przeszukiwanie losowe przez 100 iteracji
 
-                for train_index, test_index in kf.split(X, y):
-                    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
-                    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+random.seed(42)
+for _ in range(100):
+    max_depth = random.choice(max_depth_values)
+    min_samples_split = random.choice(min_samples_split_values)
+    min_samples_leaf = random.choice(min_samples_leaf_values)
+    criterion = random.choice(criterion_values)
 
-                    X_train_scaled = scaler.fit_transform(X_train)
-                    X_test_scaled = scaler.transform(X_test)
+    fold_accuracies = []
+    fold_sensitivities = []
+    fold_specificities = []
 
-                    # Trening modelu DecisionTreeClassifier z różnymi parametrami
-                    model = DecisionTreeClassifier(
-                        max_depth=max_depth,
-                        min_samples_split=min_samples_split,
-                        min_samples_leaf=min_samples_leaf,
-                        criterion=criterion,
-                        random_state=42,
-                        class_weight='balanced'
-                    )
-                    model.fit(X_train_scaled, y_train)
+    for train_index, test_index in kf.split(X, y):
+        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
 
-                    # Ocena modelu
-                    y_pred = model.predict(X_test_scaled)
-                    accuracy = np.mean(y_pred == y_test)
-                    sensitivity = np.mean(y_pred[y_test == 1] == 1)
-                    specificity = np.mean(y_pred[y_test == 0] == 0)
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
 
-                    fold_accuracies.append(accuracy)
-                    fold_sensitivities.append(sensitivity)
-                    fold_specificities.append(specificity)
+        # Trening modelu DecisionTreeClassifier z losowymi parametrami
+        model = DecisionTreeClassifier(
+            max_depth=max_depth,
+            min_samples_split=min_samples_split,
+            min_samples_leaf=min_samples_leaf,
+            criterion=criterion,
+            random_state=42,
+            class_weight='balanced'
+        )
+        model.fit(X_train_scaled, y_train)
 
-                # Uśrednianie wyników dla danego zestawu parametrów
-                avg_accuracy = np.mean(fold_accuracies)
-                avg_sensitivity = np.mean(fold_sensitivities)
-                avg_specificity = np.mean(fold_specificities)
+        # Ocena modelu
+        y_pred = model.predict(X_test_scaled)
+        accuracy = np.mean(y_pred == y_test)
+        sensitivity = np.mean(y_pred[y_test == 1] == 1)
+        specificity = np.mean(y_pred[y_test == 0] == 0)
 
-                results.append({
-                    'max_depth': max_depth,
-                    'min_samples_split': min_samples_split,
-                    'min_samples_leaf': min_samples_leaf,
-                    'criterion': criterion,
-                    'accuracy': avg_accuracy,
-                    'sensitivity': avg_sensitivity,
-                    'specificity': avg_specificity
-                })
+        fold_accuracies.append(accuracy)
+        fold_sensitivities.append(sensitivity)
+        fold_specificities.append(specificity)
 
+    # Uśrednianie wyników dla danego zestawu parametrów
+    avg_accuracy = np.mean(fold_accuracies)
+    avg_sensitivity = np.mean(fold_sensitivities)
+    avg_specificity = np.mean(fold_specificities)
+
+    results.append({
+        'max_depth': max_depth,
+        'min_samples_split': min_samples_split,
+        'min_samples_leaf': min_samples_leaf,
+        'criterion': criterion,
+        'accuracy': avg_accuracy,
+        'sensitivity': avg_sensitivity,
+        'specificity': avg_specificity
+    })
+
+# Wartosci uzyskane z przeszukiwania
+results_df = pd.DataFrame(results)
+# Sortowanie wyników według dokładności
+results_df = results_df.sort_values(by='accuracy', ascending=False)
+print("\nNajlepsze wyniki z przeszukiwania losowego:")
+print(results_df.head(10))
+# Zapis wyników do pliku CSV
+results_df.to_csv('hyperparameter_tuning_results.csv', index=False)
+
+# Wykres porównawczy wyników
+plt.figure(figsize=(12, 8))
+sns.barplot(x='accuracy', y='max_depth', data=results_df)
+plt.title('Porównanie dokładności modeli dla różnych parametrów', fontsize=16)
+plt.xlabel('Dokładność', fontsize=14)
+plt.ylabel('Maksymalna głębokość drzewa', fontsize=14)
+plt.tight_layout()
+plt.savefig('plots/hyperparameter_tuning_accuracy_comparison.png')
+plt.close()
 
 # ----------------------------------------------------------------
 # Część 5: Sprawdzenie algorytmów alternatywnych
@@ -234,7 +257,7 @@ print("\nOcena modelu RandomForestClassifier:")
 print(classification_report(y_test, y_pred_rf))
 
 # Ocena modelu LogisticRegression
-lr_classifier = LogisticRegression(max_iter=1000, random_state=42, class_weight='balanced')
+lr_classifier = LogisticRegression(max_iter=5000, random_state=42, class_weight='balanced')
 lr_classifier.fit(X_train_scaled, y_train)
 y_pred_lr = lr_classifier.predict(X_test_scaled)
 print("\nOcena modelu LogisticRegression:")
@@ -266,7 +289,7 @@ for model_name, model_instance in models.items():
 model_names = list(models.keys())
 accuracies = [model.score(X_test_scaled, y_test) for model in models.values()]
 plt.figure(figsize=(10, 6))
-sns.barplot(x=model_names, y=accuracies, palette='viridis')
+sns.barplot(x=model_names, y=accuracies)
 plt.title('Porównanie dokładności modeli', fontsize=16)
 plt.xlabel('Modele', fontsize=14)
 plt.ylabel('Dokładność', fontsize=14)
@@ -278,7 +301,7 @@ plt.close()
 # Wykres porównawczy czułości modeli
 sensitivities = [np.mean(y_pred[y_test == 1] == 1) for y_pred in [model.predict(X_test_scaled) for model in models.values()]]
 plt.figure(figsize=(10, 6))
-sns.barplot(x=model_names, y=sensitivities, palette='viridis')
+sns.barplot(x=model_names, y=sensitivities)
 plt.title('Porównanie czułości modeli', fontsize=16)
 plt.xlabel('Modele', fontsize=14)
 plt.ylabel('Czułość', fontsize=14)
@@ -290,7 +313,7 @@ plt.close()
 # Wykres porównawczy swoistości modeli
 specificities = [np.mean(y_pred[y_test == 0] == 0) for y_pred in [model.predict(X_test_scaled) for model in models.values()]]
 plt.figure(figsize=(10, 6))
-sns.barplot(x=model_names, y=specificities, palette='viridis')
+sns.barplot(x=model_names, y=specificities)
 plt.title('Porównanie swoistości modeli', fontsize=16)
 plt.xlabel('Modele', fontsize=14)
 plt.ylabel('Swoistość', fontsize=14)
@@ -299,4 +322,13 @@ plt.tight_layout()
 plt.savefig('plots/model_comparison_specificity.png')
 plt.close()
 
+# Testowanie modeli metodą 10 krotnej walidacji krzyżowej
+from sklearn.model_selection import cross_val_score
+for model_name, model_instance in models.items():
+    cv_scores = cross_val_score(model_instance, X, y, cv=kf, scoring='accuracy')
+    print(f"\n{model_name} - Średnia dokładność z 10-krotnej walidacji krzyżowej: {np.mean(cv_scores):.4f} ± {np.std(cv_scores):.4f}")
 
+
+# ----------------------------------------------------------------
+# Część 6: Podsumowanie i zakończenie
+# ----------------------------------------------------------------
