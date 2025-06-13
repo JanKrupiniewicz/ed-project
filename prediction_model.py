@@ -92,7 +92,19 @@ for train_index, test_index in kf.split(X, y):
 
     fold_num += 1
 
-print("\nGenerowanie słupkowego wykresu uśrednionej istotności cech...")
+# Podsumowanie wyników bazowego Decision Tree (10-krotna kroswalidacja)
+print("\nPodsumowanie wyników bazowego Decision Tree (10-krotna kroswalidacja):")
+accuracy = model.score(X_test_scaled, y_test)
+sensitivity = np.mean(y_pred[y_test == 1] == 1)
+specificity = np.mean(y_pred[y_test == 0] == 0)
+accuracy_std = np.std(y_pred == y_test)
+sensitivity_std = np.std(y_pred[y_test == 1] == 1)
+specificity_std = np.std(y_pred[y_test == 0] == 0)
+print(f"Dokładność (średnia +- odchylenie standardowe): {accuracy:.4f} ± {accuracy_std:.4f}")
+print(f"Czułość (średnia +- odchylenie standardowe): {sensitivity:.4f} ± {sensitivity_std:.4f}")
+print(f"Swoistość (średnia +- odchylenie standardowe): {specificity:.4f} ± {specificity_std:.4f}")
+
+print("\nGenerowanie słupkowego wykresu uśrednionej istotności cech")
 
 # Obliczanie uśrednionej ważności cech
 # Konwersja listy array'ów ważności cech na DataFrame, a następnie obliczenie średniej
@@ -120,8 +132,18 @@ top_three_features = avg_feature_importances.head(3).index.tolist()
 top_four_features = avg_feature_importances.head(4).index.tolist()
 top_five_features = avg_feature_importances.head(5).index.tolist()
 
+# Podzbior bez cechy najważniejszej - zakładamy, że to pierwsza cecha to 'blueGoldDiff'
+top_features_without_most_important = avg_feature_importances.index.tolist()[1:6]  # Pomijamy pierwszą cechę
+# Lista podzbiorów cech do eksperymentów
+feature_subsets = [
+    top_one_features,
+    top_three_features,
+    top_four_features,
+    top_five_features,
+    top_features_without_most_important
+]
 
-for features_subset in [top_one_features, top_three_features, top_four_features, top_five_features]:
+for features_subset in feature_subsets:
     subset_name = '_'.join(features_subset)
     print(f"\nTrening modelu z podzbiorem cech: {subset_name}")
 
@@ -150,6 +172,21 @@ for features_subset in [top_one_features, top_three_features, top_four_features,
 
     # Swoistość (średnia +-odchylenie standardowe)
     print(f"Swoistość (średnia +- odchylenie standardowe): {specificity:.4f} ± {specificity_std:.4f}")
+
+
+# Cechy ktore najbardziej wpływają na 'blueGoldDiff'
+print("\nCechy, które najbardziej wpływają na 'blueGoldDiff':")
+top_features = avg_feature_importances.head(5).index.tolist()
+print(f"Najważniejsze cechy: {', '.join(top_features)}")
+# Wykres porównawczy istotności cech dla różnych podzbiorów
+plt.figure(figsize=(12, 8))
+sns.barplot(x=avg_feature_importances.values, y=avg_feature_importances.index)
+plt.title('Porównanie istotności cech dla różnych podzbiorów', fontsize=16)
+plt.xlabel('Uśredniona istotność', fontsize=14)
+plt.ylabel('Cechy', fontsize=14)
+plt.tight_layout()
+plt.savefig('plots/feature_importance/comparison_feature_importance.png')
+plt.close()
 
 
 # ------------------------------------------------------------------
@@ -279,6 +316,7 @@ models = {
     'Logistic Regression': lr_classifier,
     'K-Nearest Neighbors': knn_classifier
 }
+
 
 for model_name, model_instance in models.items():
     y_pred = model_instance.predict(X_test_scaled)
